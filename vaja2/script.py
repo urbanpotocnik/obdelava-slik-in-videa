@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os, sys
 
+parent_dir = "/home/urban/Faks/Obdelava slik in videa/Vaje"
+sys.path.append(parent_dir)
 from OSV_lib import displayImage, loadImage
 
 # Naloga 1

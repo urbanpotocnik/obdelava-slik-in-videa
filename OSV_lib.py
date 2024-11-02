@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os, sys
 
-# Naloga 2
 def loadImage(iPath, iSize, iType):
     with open(iPath, 'rb') as fid:
         buffer = fid.read()
@@ -16,34 +16,26 @@ def loadImage(iPath, iSize, iType):
     oImage = np.ndarray(oImage_shape, dtype = iType, buffer = buffer, order = 'F')
     return oImage
 
-def displayImage(iImage, iTitle=''):
+def displayImage(iImage, iTitle='', iGridX=None, iGridY=None):
     fig = plt.figure()
     plt.title(iTitle)
-    plt.imshow(iImage, cmap='gray', vmin=0, vmax=255, aspect='equal')
+    
+    # Izračunaj extent, če sta iGridX in iGridY definirana
+    if iGridX is not None and iGridY is not None:
+        extent = [iGridX[0], iGridX[-1], iGridY[-1], iGridY[0]]  # [xmin, xmax, ymin, ymax]
+        plt.imshow(iImage, cmap='gray', vmin=0, vmax=255, aspect='equal', extent=extent)
+    else:
+        plt.imshow(iImage, cmap='gray', vmin=0, vmax=255, aspect='equal')
+    
     plt.show()
     return fig
 
-# Dodatek
 def saveImage(iImage, iPath, iType):
     with open(iPath, 'wb') as fid:      # 'rb'=read mode, 'wb'=write mode
         fid.write(iImage.tobytes())
         fid.close()                     # there is no need for the close method, but it is written in the manual
 
-# TO DO tukaj dodaj vse metode, use tudi malo pokomentiraj
-# dodaj se importe 
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-from OSV_lib import displayImage, loadImage
-
-# Naloga 1
-if __name__ == "__main__":
-    image = loadImage("/home/urban/Faks/Obdelava slik in videa/Vaje/vaja2/data/valley-1024x683-08bit.raw", (1024, 683), np.uint8)
-    displayImage(image, "Originalna slika")
-
-# Naloga 2
-def computeHistorgram(iImage):
+def computeHistogram(iImage):
     nBits = int(np.log2(iImage.max())) + 1  # Ta vrstica izračuna število bitov, ki je potrebno za predstavitev najvišje intenzitete v sliki
 
     oLevels = np.arange(0, 2 ** nBits, 1)   # Ustvarjanje nivojev intenzitete
@@ -74,15 +66,8 @@ def displayHistogram(iHist, iLevels, iTitle):
     plt.ylim(0, 1.05 * iHist.max())
     plt.show()
 
-if __name__ == "__main__":
-    hist, prob, CDF, levels = computeHistorgram(image)
-    displayHistogram(hist, levels, "Histogram")
-    displayHistogram(prob, levels, "Normaliziran histogram")
-    displayHistogram(CDF, levels, "CDF")
-
-# Naloga 3
 def equalizeHistogram(iImage):
-    _, _, CDF, _ = computeHistorgram(iImage)    # Izračun CDFja iz podane slike
+    _, _, CDF, _ = computeHistogram(iImage)    # Izračun CDFja iz podane slike
 
     nBits = int(np.log2(iImage.max())) + 1
     
@@ -98,17 +83,9 @@ def equalizeHistogram(iImage):
     
     return oImage
 
-if __name__ == "__main__":
-    image_equalized = equalizeHistogram(image)
-    displayImage(image_equalized, "Slika z izravnanim histogramom")
-    hist, prob, CDF, levels = computeHistorgram(image_equalized)
-    displayHistogram(hist, levels, "Histogram izravnane slike")
-    displayHistogram(CDF, levels, "CDF izravnane slike")
-
-# Dodatno: Naloga 3
 # Entropija slike je mera za količino informacije, ki jo vsebuje slika
 def computeEntropy(iImage):
-    hist, _, _, _  = computeHistorgram(iImage)
+    hist, _, _, _  = computeHistogram(iImage)
     height, width = iImage.shape                      # Izračunanje višine in širine slike
     nPixels = height * width                         
     probabilities = np.zeros_like(hist, dtype=float)  # Inicializacija arraya
@@ -125,19 +102,6 @@ def computeEntropy(iImage):
 
     return oEntropy
 
-if __name__ == "__main__":
-    normalPictureEntropy = computeEntropy(image)
-    equalizedPictureEntropy = computeEntropy(image_equalized)
-
-    print(f"Entropija navadne slike = {normalPictureEntropy}")
-    print(f"Entropija izravnane slike = {equalizedPictureEntropy}")
-    
-'''
-Večja bo entropija izravnane slike, ker izravnava histograma povečuje razpršenost vrednosti pikslov, 
-kar vodi do bolj enakomerne porazdelitve in posledično višje entropije.
-'''
-    
-# Dodatno: Naloga 4
 def addNoise(iImage, iStd):
     height, width = iImage.shape
     oNoise = np.random.randn(height, width) * iStd
@@ -146,21 +110,101 @@ def addNoise(iImage, iStd):
     
     return oImage, oNoise
 
-if __name__ == "__main__":
-    displayImage(image, "Originalna slika brez noisa")
+def interpolateImage(iImage, iSize, iOrder):
+    iOrder = int(iOrder)
+    Y, X = iImage.shape
 
-    for i in [2, 5, 10, 25]:
-        noisyImage, _ = addNoise(image, i)
-        displayImage(noisyImage, f"Originalna slika z noisom, standardni odklon = {i}")
-        
-'''
-Slika šuma lahko vsebuje negativne in pozitivne vrednosti (ker Gaussov šum vsebuje vrednosti okoli ničle). 
-To lahko povzroči težave pri prikazovanju, saj slike običajno pričakujejo vrednosti med 0 in 255 za sivinsko lestvico.
+    M, N = iSize
+
+    oImage = np.zeros((N, M), dtype = iImage.dtype)
+
+    dx = (X - 1) / (M - 1)
+    dy = (Y - 1) / (N - 1)
+
+    for n in range(N):
+        for m in range(M):
+            s = 0
+
+            pt = np.array([m * dx, n * dy])
+
+            # 0 red interpolacije
+            if iOrder == 0:
+                # Najdi najblizjega soseda
+                px = np.round(pt).astype(np.uint16)
+                s = iImage[px[1], px[0]]
+
+            if iOrder == 1:
+                px = np.floor(pt).astype(np.uint16)
+
+                # Racunanje utezi
+                a = abs(pt[0] - (px[0] + 1)) * abs(pt[1] - (px[1] + 1))
+                b = abs(pt[0] - (px[0] + 0)) * abs(pt[1] - (px[1] + 1))
+                c = abs(pt[0] - (px[0] + 1)) * abs(pt[1] - (px[1] + 0))
+                d = abs(pt[0] - (px[0] + 0)) * abs(pt[1] - (px[1] + 0))
+
+                # Sivinske 
+                sa = iImage[px[1] + 0, px[0] + 0]
+                sb = iImage[px[1] + 0, min(px[0] + 1, X - 1)]
+                sc = iImage[min(px[1] + 1, Y - 1), px[0] + 0]
+                sd = iImage[min(px[1] + 1, Y -1), min(px[0] + 1, X -1)]
+
+                s = int(a * sa + b * sb + c * sc + d * sd)
+
+
+
+            oImage[n, m] = s
     
-Pri računanju histograma šuma moraš upoštevati, da histogram morda vključuje tudi vrednosti, 
-ki presegajo običajne meje slike (pod 0 ali nad 255), tako da moramo prikazati histogram, 
-ki prikazuje dejansko porazdelitev šuma brez omejitev na vrednosti 0–255, saj bi omejevanje popačilo rezultate.
-'''
+    return oImage
 
+def analyzeInterpolationRegion(image, start_cooridnates, region_size):
+    start_x, start_y = start_cooridnates
+    region_width, region_height = region_size
 
-# TO DO uredi 
+    region = image[start_y:start_y + region_height, start_x:start_x + region_width]
+
+    displayImage(region, "Izrezano interpolacijsko območje")
+    plt.show()
+
+    hist, prob, CDF, levels = computeHistogram(region)
+    displayHistogram(hist, levels, "Histogram interpolacijskega območja")
+    plt.show()
+
+    # Izračunaj minimalne, maksimalne in povprečne sivinske vrednosti
+    min_val = np.min(region)
+    max_val = np.max(region)
+    avg_val = np.mean(region)
+
+    print(f"Minimalna sivinska vrednost: {min_val}")
+    print(f"Maksimalna sivinska vrednost: {max_val}")
+    print(f"Povprečna sivinska vrednost: {avg_val}")
+
+    return min_val, max_val, avg_val
+
+def decimateImage(iImage, iKernel, iLevel):
+    # Normaliziramo jedro tako, da vsota elementov postane enaka 1
+    iKernel = iKernel / np.sum(iKernel)
+    
+    oImage = iImage.copy()
+    
+    # Za vsak nivo decimacije ponovimo postopek konvolucije in decimacije
+    for level in range(iLevel):
+        image_h, image_w = oImage.shape
+        kernel_h, kernel_w = iKernel.shape
+        
+        # Oblikujemo prazno sliko za shranjevanje rezultatov konvolucije
+        pad_h, pad_w = kernel_h // 2, kernel_w // 2
+        padded_image = np.pad(oImage, ((pad_h, pad_h), (pad_w, pad_w)), mode='reflect')
+        
+        # Ustvarimo novo prazno sliko za trenutni nivo konvolucije
+        convolved_image = np.zeros_like(oImage)
+        
+        # Konvolucija
+        for i in range(image_h):
+            for j in range(image_w):
+                region = padded_image[i:i + kernel_h, j:j + kernel_w]
+                convolved_image[i, j] = np.sum(region * iKernel)
+        
+        # Decimacija: vzamemo vsak drugi piksel v obeh smereh
+        oImage = convolved_image[::2, ::2]
+    
+    return oImage
