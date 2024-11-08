@@ -208,3 +208,6 @@ def decimateImage(iImage, iKernel, iLevel):
         oImage = convolved_image[::2, ::2]
     
     return oImage
+
+
+# TO DO: zrihti jupyter!!!
