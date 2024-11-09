@@ -209,5 +209,93 @@ def decimateImage(iImage, iKernel, iLevel):
     
     return oImage
 
+def loadImage3D(iPath, iSize, iType):
+    fid = open(iPath, 'rb')
+    im_shape = (iSize[1], iSize[0], iSize[2]) # Y, X, Z
+    oImage = np.ndarray(shape=im_shape, dtype=iType, buffer=fid.read(), order="F")
+    fid.close()
 
-# TO DO: zrihti jupyter!!!
+    return oImage
+
+# Dodelana funkcija iz 1. vaje
+def displayImage(iImage, iTitle='', iGridX=None, iGridY=None):
+    fig = plt.figure()
+    plt.title(iTitle)
+
+    if iGridX is not None and iGridY is not None:
+        stepX = iGridX[1] - iGridX[0]
+        stepY = iGridY[1] - iGridY[0]
+
+        extent = {
+            iGridX[0] - 0.5 * stepX,
+            iGridX[-1] + 0.5 * stepX,
+            iGridY[-1] + 0.5 * stepY,
+            iGridY[0] - 0.5 * stepY,
+        }
+
+    extent = {
+        0 - 0.5,
+        iImage.shape[1] - 0.5, 
+        iImage.shape[0] - 0.5, 
+        0 - 0.5,
+    }
+    
+    # Izračunaj extent, če sta iGridX in iGridY definirana
+    if iGridX is not None and iGridY is not None:
+        extent = [iGridX[0], iGridX[-1], iGridY[-1], iGridY[0]]  # [xmin, xmax, ymin, ymax]
+        plt.imshow(iImage, cmap='gray', vmin=0, vmax=255, aspect='equal', extent=extent)
+    else:
+        plt.imshow(iImage, cmap='gray', vmin=0, vmax=255, aspect='equal')
+    
+    plt.show()
+    return fig
+
+def getPlanarCrossSection(iImage, iDim, iNormVec, iLoc):
+    Y, X, Z = iImage.shape
+    dx, dy, dz = iDim
+
+    # Stranska ravnina
+    if iNormVec == [1, 0, 0]:
+        oCS = iImage[:, iLoc, :].T
+        oH = np.arange(Y) * dy
+        oV = np.arange(Z) * dz
+    
+    # Celna ravnina
+    if iNormVec == [0, 1, 0]:
+        oCS = iImage[iLoc, :, :].T
+        oH = np.arange(X) * dx
+        oV = np.arange(Z) * dz
+
+    # Precna ravnina
+    if iNormVec == [0, 0, 1]:
+        oCS = iImage[:, :, iLoc]
+        oH = np.arange(X) * dx
+        oV = np.arange(Y) * dy
+
+    return np.array(oCS), oH, oV
+
+def getPlanarProjection(iImage, iDim, iNormVec, iFunc):
+    Y, X , Z = iImage.shape
+    dx, dy, dz = iDim
+
+    # Stranska ravnina
+    if iNormVec == [1, 0, 0]:
+        oP = iFunc(iImage, axis = 1).T
+        oH = np.arange(Y) * dy
+        oV = np.arange(Z) * dz
+
+    # Celna ravnina
+    if iNormVec == [0, 1, 0]:
+        oP = iFunc(iImage, axis = 0).T
+        oH = np.arange(X) * dx
+        oV = np.arange(Z) * dz
+
+    # Precna ravnina
+    if iNormVec == [0, 0, 1]:
+        oP = iFunc(iImage, axis = 2)
+        oH = np.arange(X) * dx
+        oV = np.arange(Y) * dy
+
+    return oP, oH, oV
+
+# TO DO: zrihti jupyter
