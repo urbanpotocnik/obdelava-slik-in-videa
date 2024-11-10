@@ -42,4 +42,4 @@ if __name__ == '__main__':
 def saveImage(iImage, iPath, iType):
     with open(iPath, 'wb') as fid:      # 'rb'=read mode, 'wb'=write mode
         fid.write(iImage.tobytes())
-        fid.close()                     # there is no need for the close method, but it is written in the manual
+        fid.close()                     # close ni potreben, je bil pa napisan v navodilih

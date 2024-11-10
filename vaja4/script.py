@@ -162,9 +162,10 @@ if __name__ == "__main__":
 
 # Dodatno: Naloga 3
 """
-Pri CT slikah človeškega telesa so najpogosteje uporabljene projekcije maksimalne vrednosti (za kosti), povprečne vrednosti 
-(za mehka tkiva) in medianske vrednosti (za zmanjšanje šuma). Projekciji standardnega odklona in variance sta specifični in 
-se uporabljata le v raziskovalne namene, medtem ko je minimalna projekcija redko smiselna.
+Pri CT slikah človeškega telesa so najpogosteje uporabljene projekcije maksimalne vrednosti (za kosti), 
+povprečne vrednosti (za mehka tkiva) in medianske vrednosti (za zmanjšanje šuma). 
+Projekciji standardnega odklona in variance sta specifični in se uporabljata le v raziskovalne namene,
+medtem ko je minimalna projekcija redko smiselna.
 """
 
 # TO DO: Dodatno naloga 4 in 5

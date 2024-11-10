@@ -138,14 +138,15 @@ if __name__ == "__main__":
 """
 Prednosti interpolacije prvega reda:
 
-Boljša kakovost slike: Zmanjšuje pikslaste robove in zameglitve.
-Ohranjanje podrobnosti: Bolj natančno upodablja prehode in podrobnosti.
-Učinkovitost: Razmeroma hitro izvajanje, primerljivo z ničto redno.
+-Boljša kakovost slike: Zmanjšuje pikslaste robove in zameglitve.
+-Ohranjanje podrobnosti: Bolj natančno upodablja prehode in podrobnosti.
+-Učinkovitost: Razmeroma hitro izvajanje, primerljivo z ničto redno.
+
 Slabosti interpolacije prvega reda:
 
-Računalska kompleksnost: Potrebuje več izračunov, kar poveča čas izvajanja.
-Možnost izkrivljanja: Lahko pride do manjših izkrivljanj ali artefaktov.
-Neenakomernost: Težave pri prehodih med intenzitetami, kar vodi do neenakomerne distribucije.
+-Računalska kompleksnost: Potrebuje več izračunov, kar poveča čas izvajanja.
+-Možnost izkrivljanja: Lahko pride do manjših izkrivljanj ali artefaktov.
+-Neenakomernost: Težave pri prehodih med intenzitetami, kar vodi do neenakomerne distribucije.
 """
 
 if __name__ == "__main__":
