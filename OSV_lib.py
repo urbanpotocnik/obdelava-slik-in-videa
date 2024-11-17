@@ -298,4 +298,90 @@ def getPlanarProjection(iImage, iDim, iNormVec, iFunc):
 
     return oP, oH, oV
 
+def scaleImage(iImage, a, b):
+    oImage = np.array(iImage, dtype=float)
+    oImage = a * iImage + b
+
+    return oImage
+
+def windowImage(iImage, iC, iW):
+    oImage = np.array(iImage, dtype=float)
+    oImage = 255/iW * (iImage - (iC - iW/2))    # Skaliranje vrednosti vhodne slike na skalo 0-255
+
+    oImage[iImage < iC - iW/2] = 0              # Clipnemo sliko na range 0-255
+    oImage[iImage > iC + iW/2] = 255
+
+    return oImage
+
+def sectionalScaleImage(iImage, iS, oS):
+    oImage = np.array(iImage, dtype=float)
+
+    for i in range(len(iS) - 1):
+        sL = iS[i]
+        sH = iS[i+1]
+
+        idx = np.logical_and(iImage >= sL, iImage <= sH)
+        
+        # Scale faktor
+        k = (oS[i + 1] - oS[i]) / (sH - sL)
+
+        oImage[idx] = k * (iImage[idx] - sL) + oS[i]
+
+    return oImage
+
+def gammaImage(iImage , gama):
+    oImage = np.array(iImage, dtype=float)
+    oImage = 255 ** (1 - gama) * (iImage ** gama)
+
+    return oImage
+
+def thresholdImage(iImage, iT):
+    Lg = 2 ** 8
+    oImage = np.array(iImage, dtype=float)
+
+    for i in range(iImage.shape[0]):
+        for j in range(iImage.shape[1]):
+            if iImage[i, j] <= iT:
+                oImage[i, j] = 0
+            else:
+                oImage[i, j] = Lg - 1
+        
+    return oImage
+
+def thresholdCurve(iImage):
+    dynamic_range = range(int(iImage.min()), int(iImage.max()) + 1)
+    pixel_counts = []
+
+    for t in dynamic_range:
+        # Štejemo število pikslov ki imajo isto ali manjso vrednost kot prag t
+        count = np.sum(iImage <= t)
+        pixel_counts.append(count)
+
+    return dynamic_range, pixel_counts
+
+def nonLinearSectionalScaleImage(iImage, iS, oS):
+    oImage = np.zeros_like(iImage, dtype=float)
+    
+    for i in range(0, len(iS) - 2, 2):  # Obdelujemo po tri točke naenkrat
+        sf = iS[i:i+3]
+        sg = oS[i:i+3]
+
+        A = np.array([
+            [sf[0]**2, sf[0], 1],  
+            [sf[1]**2, sf[1], 1],  
+            [sf[2]**2, sf[2], 1]  
+        ])
+
+        B = np.array(sg)  
+
+        # Izračunamo rešitev sistema
+        coefficients = np.linalg.solve(A, B)
+        print("Koeficienti A, B, C:", coefficients)
+    
+        Ai, Bi, Ci = coefficients
+        mask = (iImage >= sf[0]) & (iImage <= sf[2])
+        oImage[mask] = Ai * iImage[mask]**2 + Bi * iImage[mask] + Ci
+
+    return oImage
+
 # TO DO: zrihti jupyter
