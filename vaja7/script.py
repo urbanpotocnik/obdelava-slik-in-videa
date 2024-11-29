@@ -5,6 +5,12 @@ parent_dir = "/home/urban/Faks/Obdelava slik in videa/Vaje"
 sys.path.append(parent_dir)
 from OSV_lib import loadImage, displayImage
 
+# Naloga 1:
+if __name__ == "__main__":
+    I = loadImage("vaja7/data/cameraman-256x256-08bit.raw", [256,256], np.uint8)
+    displayImage(I,"Originalna slika")
+
+# Naloga 2:
 def spatialFiltering(iType, iImage, iFilter, iStatFunc=None, iMorphOp=None):
     N,M = iFilter.shape
     m = int((M-1)/2)
@@ -39,7 +45,7 @@ def spatialFiltering(iType, iImage, iFilter, iStatFunc=None, iMorphOp=None):
     oImage = changeSpatialDomain("reduce", oImage, m, n)
     return oImage
 
-
+# Naloga 3:
 def changeSpatialDomain(iType, iImage, iX, iY, iMode=None, iBgr=0):
     Y,X = iImage.shape
 
@@ -58,18 +64,26 @@ def changeSpatialDomain(iType, iImage, iX, iY, iMode=None, iBgr=0):
     
     return oImage
 
+# Dodatno: Naloga 2
+def weightedAverageFilter(iM, iN, iValue):
+    oFilter = np.zeros((iN, iM))
+    centerY, centerX = iN // 2, iM // 2
+
+    for y in range(iN):
+        for x in range(iM):
+            distance = abs(centerY - y) + abs(centerX - x)
+            oFilter[y, x] = iValue ** (distance)
+
+    return oFilter
+
 if __name__ == "__main__":
-    I = loadImage("vaja7/data/cameraman-256x256-08bit.raw", [256,256], np.uint8)
-    displayImage(I,"Originalna slika")
-
-
     Kernel = np.array([
         [1,1,1],
         [1,-8,1],
         [1,1,1]
     ])
     KImage = spatialFiltering("kernel", I, iFilter=Kernel)
-    displayImage(KImage,"Filtrirana slika z laplacovim filtrom")
+    displayImage(KImage,"Filtrirana slika z Laplaceovim filtrom")
     
     SImage = spatialFiltering("statistical", I, iFilter=np.zeros((30,30)), iStatFunc=np.median)
     displayImage(SImage,"Statisticno filtrirana slika: mediana")
@@ -84,5 +98,11 @@ if __name__ == "__main__":
     MImage = spatialFiltering("morphological", I, iFilter=MKernel, iMorphOp="erosion")
     displayImage(MImage,"Morfološko filtriranje: erozija")
 
+    # Naloga 3:
     PaddedImage = changeSpatialDomain("enlarge", I, 30, 30)
     displayImage(PaddedImage,"Razširjena sliak z vrednostjo 0")
+
+    # Dodatno: Naloga 2
+    filter_5x7 = weightedAverageFilter(7, 5, 2)
+    print("Nenormaliziran filter velikosti 5x7 z iValue=2:\n", filter_5x7)
+    # Filter, za katerega izberemo iValue = 1, se imenuje "Sobelov filter"
