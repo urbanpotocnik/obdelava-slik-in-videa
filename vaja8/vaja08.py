@@ -5,6 +5,9 @@ import sys
 
 from matplotlib.backends.qt_compat import QtCore
 from PyQt5 import QtGui, QtWidgets
+parent_dir = "/home/urban/Faks/Obdelava slik in videa/Vaje"
+sys.path.append(parent_dir)
+from OSV_lib import loadImage, displayImage, spatialFiltering, changeSpatialDomain, thresholdImage
 
 if int(QtCore.qVersion()[0]) == 5:
     from matplotlib.backends.backend_qt5agg import FigureCanvas
@@ -652,9 +655,158 @@ def houghTransform2D2P(iImage, stepR, stepF):
 
     return oAcc, rangeR, rangeF
 
-
+'''
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     gui = mainWindow()
     gui.show()
     sys.exit(app.exec())
+'''
+
+# Dodatno: Naloga 1
+# Za sliko 1:
+# Standardni odklon 1, spodnji prag 0, zgornji prag 1, korak parametra r 1, korak parametra fi 1
+# Za sliko 2:
+# Standardni odklon 5, spodnji prag 0, zgornji prag 1, korak parametra r 1, korak parametra fi 1
+# Na podlagi rezultatov Houghove preslikave za sliki `box1.jpg` in `box2.jpg` z različnimi parametri lahko sklepamo naslednje:
+
+# Manjši standardni odklon pomeni manjšo zameglitev slike, kar vodi do bolj natančnega zaznavanja robov. To je primerno za slike z ostrimi robovi in malo šuma.
+# Manjsi koraki parametra r in fi pomenijo večjo natančnost pri iskanju premic, vendar tudi večjo zahtevnost računanja.
+# Najvecja vrednost v akumulatorski matriki kaze na najbolj izrazito premico v sliki.
+
+
+# Dodatno: Naloga 2
+# Zmanjsanje korakov parametra r in fi na najnizjo vrednost poveca natancnost Houghove preslikave in omogoca zaznavanje vec premic. Vendar pa to poveca tudi zahtevnost racunanja.
+# Vendar pa to tudi poveca velikost akumulatorske matrike in racunsko zahtevnost algoritma.
+
+
+# Dodatno: Naloga 3
+# Natancnost dolocanja premic s Houghovo preslikavo je odvisna od:
+# - Korakov parametrov r in fi, ki dolocajo locljivost preslikave
+# - Kakovosti vhodne slike in robov v sliki
+# - Paramterov pri iskanju robov (standardni odklon, spodnji in zgornji prag)
+# - Velikosti akumulatorske matrike
+# - Stevila glasov v akumulatorski matriki
+
+# Dodatno: Naloga 4
+# Houghova preslikava ima vec pomembnih lastnosti:
+# - Robustnost pri zaznavanju premic tudi v prisotnosti suma
+# - Zmoznost zaznavanja vec premic v sliki
+# - Zmoznost zaznavanja premic pod razlicnimi koti
+# - Zmoznost zaznavanja razlicnih oblik premic (ravne, polkroznice, kroznice)
+# - Obcutljivost na izbiro parametrov
+# - Uporaba akumulatorske matrike za belezenje glasov
+
+# Dodatno: Naloga 5
+"""
+if __name__ == "__main__":
+    I = loadImage("vaja8/circles-160x160-08bit.raw", [160,160], np.uint8)
+    displayImage(I,"Circles")
+
+    SobelX = np.array([
+        [-1,0,1],
+        [-2,0,2],
+        [-1,0,1]
+    ])
+    Sobely = np.array([
+        [-1,-2,-1],
+        [0,0,0],
+        [1,2,1]
+    ])
+
+    sobelImageX = spatialFiltering("kernel", I, iFilter=SobelX)
+    sobelImageY = spatialFiltering("kernel", I, iFilter=Sobely)
+
+    amplitude = np.sqrt(sobelImageX**2 + sobelImageY**2)
+    amplitude = (amplitude / np.max(amplitude)) * 255
+
+    displayImage(sobelImageX, 'Sobel X')
+    displayImage(sobelImageY, 'Sobel Y')
+    displayImage(amplitude, 'Amplituda')
+
+    tImage = thresholdImage(amplitude, 100)
+    displayImage(tImage, "Slika po upragovanju")
+    # Uporabljena vrednost praga je 100
+"""
+
+def getCenterPoint(iImage, iRadius):
+    Y, X = iImage.shape
+    oAcc = np.zeros((Y, X))
+
+    rangeF = np.arange(0, 360, 1)  
+    rangeFrad = np.deg2rad(rangeF)  
+    idxF = np.arange(len(rangeF))
+
+    for y in range(Y):
+        for x in range(X):
+            if iImage[y, x]:
+                for f_idx in idxF:
+                    fi = rangeFrad[f_idx]
+                    x0 = int(x - iRadius * np.cos(fi))
+                    y0 = int(y - iRadius * np.sin(fi))
+
+                    if 0 <= x0 < X and 0 <= y0 < Y:
+                        oAcc[y0, x0] += 1
+
+    max_value = 0
+    oCenter = [0, 0]
+    for y in range(Y):
+        for x in range(X):
+            if oAcc[y, x] > max_value:
+                max_value = oAcc[y, x]
+                oCenter = [x, y]  
+
+    return oCenter, oAcc
+"""
+if __name__ == "__main__":
+    I2 = loadImage("vaja8/circles-160x160-08bit.raw", [160,160], np.uint8)
+    center, __ = getCenterPoint(I2, 39)
+    print(center)
+"""
+
+def getCenterPointandRadius(iImage):
+    Y, X = iImage.shape
+
+    minR = 5
+    maxR = 80
+    stepR = 1
+    rangeR = np.arange(minR, maxR, stepR)
+    rangeFrad = np.deg2rad(np.arange(0, 360, 1))
+
+    oAcc = np.zeros((Y, X, rangeR.size))
+
+    for y in range(Y):
+        for x in range(X):
+            if iImage[y, x] > 0:  
+                for r_idx in range(rangeR.size):
+                    r = rangeR[r_idx]
+                    for fi in rangeFrad:
+                        x0 = int(x - r * np.cos(fi))
+                        y0 = int(y - r * np.sin(fi))
+
+                        if 0 <= x0 < X and 0 <= y0 < Y:
+                            oAcc[y0, x0, r_idx] += 1
+
+    threshold_ratio=0.5
+    max_value = np.max(oAcc)
+    threshold = max_value * threshold_ratio
+    circle_indices = np.argwhere(oAcc >= threshold)
+
+    detected_circles = []
+    for idx in circle_indices:
+        y0, x0, r_idx = idx
+        r = rangeR[r_idx]
+        detected_circles.append({
+            'center': (x0, y0),
+            'radius': r,
+            'votes': oAcc[y0, x0, r_idx]
+        })
+
+    return detected_circles, oAcc
+
+if __name__ == "__main__":
+    I2 = loadImage("vaja8/circles-160x160-08bit.raw", [160,160], np.uint8)
+    center,radius, __ = getCenterPointandRadius(I2)
+    print(center)
+    print(radius)
+    # NOTE: Nepopolno

@@ -7,7 +7,7 @@
     "settings": {
         "jupyter.notebookFileRoot": "${workspaceFolder}",
         "jupyter.interactiveWindow.textEditor.executeSelection": true,
-        "python.defaultInterpreterPath": "/home/urban/Faks/Obdelava slik in videa/Vaje/venv/bin/python3.12" // Change this to your python interpreter path
+        "python.defaultInterpreterPath": "/home/urban/Faks/Obdelava slik in videa/Vaje/env/bin/python3.12" // Change this to your python interpreter path
     },
     "launch": {
         "version": "0.2.0",
