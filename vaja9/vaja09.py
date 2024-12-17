@@ -940,10 +940,59 @@ def getImages(iImage1, iImage2, iStep):
 # napaka R2 in MSE pred in po poravnavi
 def computeError(rCP, iCP, oCP, rImage, iImage, oImage, iArea):
     """
-    Funkcije za izracun napake poravnave
+    Funkcija za izračun poravnalnih napak:
+    - rCP: Referenčne kontrolne točke
+    - iCP: Začetne kontrolne točke (pred poravnavo)
+    - oCP: Izhodne kontrolne točke (po poravnavi)
+    - rImage: Referenčna slika
+    - iImage: Začetna slika (pred poravnavo)
+    - oImage: Izhodna slika (po poravnavi)
+    - iArea: Območje zanimanja za izračun napake
     """
-    raise NotImplementedError( " Implement me " )
-
+    # Izračunaj napake med kontrolnimi točkami
+    error_before = np.linalg.norm(rCP - iCP, axis=1)
+    error_after = np.linalg.norm(rCP - oCP, axis=1)
+    
+    # Izračunaj srednjo kvadratno napako (MSE) za kontrolne točke
+    mse_before_cp = np.mean(error_before ** 2)
+    mse_after_cp = np.mean(error_after ** 2)
+    
+    # Izračunaj R² (koeficient determinacije) za kontrolne točke
+    ss_tot = np.sum((rCP - np.mean(rCP, axis=0)) ** 2)
+    ss_res_before = np.sum((rCP - iCP) ** 2)
+    ss_res_after = np.sum((rCP - oCP) ** 2)
+    r2_before_cp = 1 - (ss_res_before / ss_tot)
+    r2_after_cp = 1 - (ss_res_after / ss_tot)
+    
+    # Obreži slike na določeno območje
+    x_start, y_start, width, height = iArea
+    rImage_cropped = rImage[y_start:y_start+height, x_start:x_start+width]
+    iImage_cropped = iImage[y_start:y_start+height, x_start:x_start+width]
+    oImage_cropped = oImage[y_start:y_start+height, x_start:x_start+width]
+    
+    # Izračunaj MSE za slike
+    mse_before_img = np.mean((rImage_cropped - iImage_cropped) ** 2)
+    mse_after_img = np.mean((rImage_cropped - oImage_cropped) ** 2)
+    
+    # Izračunaj R² za slike
+    ss_tot_img = np.sum((rImage_cropped - np.mean(rImage_cropped)) ** 2)
+    ss_res_before_img = np.sum((rImage_cropped - iImage_cropped) ** 2)
+    ss_res_after_img = np.sum((rImage_cropped - oImage_cropped) ** 2)
+    r2_before_img = 1 - (ss_res_before_img / ss_tot_img)
+    r2_after_img = 1 - (ss_res_after_img / ss_tot_img)
+    
+    # Izpiši metrike napak
+    print("Napaka kontrolnih točk:")
+    print(f"MSE pred poravnavo: {mse_before_cp}")
+    print(f"MSE po poravnavi: {mse_after_cp}")
+    print(f"R² pred poravnavo: {r2_before_cp}")
+    print(f"R² po poravnavi: {r2_after_cp}\n")
+    
+    print("Napaka slik:")
+    print(f"MSE pred poravnavo: {mse_before_img}")
+    print(f"MSE po poravnavi: {mse_after_img}")
+    print(f"R² pred poravnavo: {r2_before_img}")
+    print(f"R² po poravnavi: {r2_after_img}")
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
