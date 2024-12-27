@@ -649,3 +649,211 @@ def changeSpatialDomain(iType, iImage, iX, iY, iMode, iBgr):
                 oImage[Y + iY + y, X + iX + x] = iImage[y % Y, x % X]
 
     return oImage  
+
+def getParametersUpgraded(iType, scale=None, trans=None, rot=None, shear=None, orig_pts=None, mapped_pts=None, centered=False, imSize=None):
+
+    oP = {}
+    if iType == "affine":
+        if scale == None:
+            scale = [1, 1]
+
+        if rot == None:
+            rot = 0
+
+        if trans == None:
+            trans = [0, 0]
+
+        if shear == None:
+            shear = [0, 0]
+
+        Tk = np.array([[scale[0], 0, 0], [0, scale[1], 0], [0, 0, 1]])  # scale
+
+        Tt = np.array([[1, 0, trans[0]], [0, 1, trans[1]], [0, 0, 1]])  # translation
+
+        phi = rot * np.pi / 180
+
+        Tf = np.array(
+            [[np.cos(phi), -np.sin(phi), 0], [np.sin(phi), np.cos(phi), 0], [0, 0, 1]]
+        )  # rotation
+
+        Tg = np.array([[1, shear[0], 0], [shear[1], 1, 0], [0, 0, 1]])  # shear
+
+        Transform = Tg @ Tf @ Tt @ Tk
+
+        if centered and imSize is not None:
+            # v argumentu funkcije je potrebno postaviti "centered" na 1 in podati velikosti slike da se izvede afina transformacija okoli sredisca
+            # pri podajanju velikosti slike je potrebno paziti na razmerje velikosti pixel-a
+
+            x, y = imSize
+            x_center, y_center = x / 2 - 1, y / 2 - 1
+
+            Toffset = np.array([[1, 0, -x_center], [0, 1, -y_center], [0, 0, 1]])
+            Toffset_back = np.array([[1, 0, x_center], [0, 1, y_center], [0, 0, 1]])
+
+            oP = Toffset_back @ Transform @ Toffset
+
+        else:
+            oP = Transform
+
+    elif iType == "radial":
+        assert orig_pts is not None, "manjka orig_pts"
+        assert mapped_pts is not None, "manjka mapped_pts"
+
+        K = orig_pts.shape[0]  # stevilo kontrolnih tock
+        UU = np.zeros(
+            (K, K), dtype=float
+        )  # insticiramo matriko radialnih funkcij kontrolnih tock
+
+        for i in range(K):
+            UU[i, :] = getRadialValues(
+                orig_pts[i, :], orig_pts
+            )  # izracunamo radialne funkcije za vsako kontrolno tocko do vseh ostalih
+
+        # resimo sistem lin enacb ki nam da projekcijo kontrolnih tock do mapped_pts
+        oP["alphas"] = np.linalg.lstsq(UU, mapped_pts[:, 0])[0]
+        oP["betas"] = np.linalg.lstsq(UU, mapped_pts[:, 1])[0]
+        oP["pts"] = orig_pts
+
+    return oP
+
+def spatialFiltering(iType, iImage, iFilter, iStatFunc=None, iMorphOp=None):
+    N,M = iFilter.shape
+    m = int((M-1)/2)
+    n = int((N-1)/2)
+    
+    iImage = changeSpatialDomain("enlarge", iImage, m, n, 0, 0)
+
+    Y,X = iImage.shape
+    oImage = np.zeros((Y,X), dtype=float)
+
+    for y in range(n, Y-n):
+        for x in range(m,X-m):
+            patch = iImage[y-n:y+n+1, x-m:x+m+1]
+            
+            if iType == "kernel":
+                oImage[y,x] = (patch * iFilter).sum()
+            elif iType == "statistical":
+                oImage[y,x] = iStatFunc(patch)                 
+            elif iType == "morphological":
+                R = patch[iFilter!=0]
+                if iMorphOp == "erosion":
+                    oImage[y,x]=R.min()
+                elif iMorphOp == "dialation":
+                    oImage[y,x]=R.max()
+                else:
+                    print("\nError: Incorrect iMorphOp!\n")
+                    return 0                                 
+            else:
+                print("\nError: Incorrect iType!\n")
+                return 0        
+
+    oImage = changeSpatialDomain("reduce", oImage, m, n, 0, 0)
+    return oImage
+
+# Naloga 3:
+def changeSpatialDomain(iType, iImage, iX, iY, iMode, iBgr):
+    Y,X = iImage.shape
+
+    if iType == "enlarge":
+        oImage = np.zeros((Y+2*iY, X+2*iX))
+        oImage[iY:Y+iY, iX:X+iX] = iImage
+
+    elif iType == "reduce":
+        oImage = iImage[iY:Y-iY, iX:X-iX]
+
+    else:
+        print("\nError: Incorrect iType!\n")
+        return 0  
+
+    if iMode == "constant":
+        oImage = np.zeros((Y+2*iY, X+2*iX)) + iBgr
+        oImage[iY:Y+iY, iX:X+iX] = iImage
+
+    elif iMode == "extrapolation":
+        oImage = np.zeros((Y+2*iY, X+2*iX)) 
+        oImage[iY:Y+iY, iX:X+iX] = iImage
+
+        oImage[:iY, iX:X + iX] = iImage[0, :]
+        oImage[Y + iY:, iX:X + iX] = iImage[-1, :]
+        oImage[iY:Y + iY, :iX] = iImage[:, 0].reshape(-1, 1)
+        oImage[iY:Y + iY, X + iX:] = iImage[:, -1].reshape(-1, 1)
+        oImage[:iY, :iX] = iImage[0, 0]
+        oImage[:iY, X + iX:] = iImage[0, -1]
+        oImage[Y + iY:, :iX] = iImage[-1, 0]
+        oImage[Y + iY:, X + iX:] = iImage[-1, -1]
+
+
+    elif iMode == "reflection":
+        oImage = np.zeros((Y + 2 * iY, X + 2 * iX), dtype=iImage.dtype)
+        oImage[iY:Y + iY, iX:X + iX] = iImage
+
+        for y in range(iY):
+            idx = (iY - y) % Y
+            oImage[y, iX:X + iX] = iImage[idx, :]
+        for y in range(iY):
+            idx = (Y - (y % Y) - 1)
+            oImage[Y + iY + y, iX:X + iX] = iImage[idx, :]
+
+        for x in range(iX):
+            idx = (iX - x) % X
+            oImage[:, x] = oImage[:, iX + idx]
+        for x in range(iX):
+            idx = (X - (x % X) - 1)
+            oImage[:, X + iX + x] = oImage[:, iX + idx]
+
+        for y in range(iY):
+            for x in range(iX):
+                idx_y_top = (iY - y) % Y
+                idx_x_left = (iX - x) % X
+                idx_y_bottom = (Y - (y % Y) - 1)
+                idx_x_right = (X - (x % X) - 1)
+
+                oImage[y, x] = iImage[idx_y_top, idx_x_left]
+                oImage[y, X + iX + x] = iImage[idx_y_top, idx_x_right]
+                oImage[Y + iY + y, x] = iImage[idx_y_bottom, idx_x_left]
+                oImage[Y + iY + y, X + iX + x] = iImage[idx_y_bottom, idx_x_right]
+
+
+    elif iMode == 'period':
+        if iImage.ndim == 3:
+            oImage = np.zeros((Y + 2*iY, X + 2*iX, iImage.shape[2]), dtype=iImage.dtype)
+        else:
+            oImage = np.zeros((Y + 2*iY, X + 2*iX), dtype=iImage.dtype)
+
+        for y in range(Y):
+            for x in range(X):
+                oImage[iY + y, iX + x] = iImage[y, x]
+
+        for y in range(iY):
+            for x in range(X):
+                oImage[y, iX + x] = iImage[(y - iY) % Y, x]
+
+        for y in range(iY):
+            for x in range(X):
+                oImage[Y + iY + y, iX + x] = iImage[y % Y, x]
+
+        for y in range(Y):
+            for x in range(iX):
+                oImage[iY + y, x] = iImage[y, (x - iX) % X]
+
+        for y in range(Y):
+            for x in range(iX):
+                oImage[iY + y, X + iX + x] = iImage[y, x % X]
+
+        for y in range(iY):
+            for x in range(iX):
+                oImage[y, x] = iImage[(y - iY) % Y, (x - iX) % X]
+
+        for y in range(iY):
+            for x in range(iX):
+                oImage[y, X + iX + x] = iImage[(y - iY) % Y, x % X]
+
+        for y in range(iY):
+            for x in range(iX):
+                oImage[Y + iY + y, x] = iImage[y % Y, (x - iX) % X]
+
+        for y in range(iY):
+            for x in range(iX):
+                oImage[Y + iY + y, X + iX + x] = iImage[y % Y, x % X]
+
+    return oImage            
