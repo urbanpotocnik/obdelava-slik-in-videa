@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os, sys
 parent_dir = "/home/urban/Faks/Obdelava slik in videa/Vaje"
 sys.path.append(parent_dir)
-from OSV_lib import loadImage, displayImage, transformImage, getRadialValues, getParameters, getParametersUpgraded, changeSpatialDomain, spatialFiltering, thresholdImage
+from OSV_lib import displayImage, transformImage, getParameters, spatialFiltering, thresholdImage
 
 # Naloga 1:
 # slika je 807x421
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     
     T1 = getParameters("affine", trans=[offset[0], offset[1]])
     Timage2 = transformImage("affine", oImage, pxDim, np.linalg.inv(T1), iBgr=bgr, iInterp=1)
-    displayImage(Timage2, "Premik 1")
+    displayImage(Timage2, "Translacija 1")
 
     T2 = getParameters("affine", rot=-angle)
     Timage1 = transformImage("affine", Timage2, pxDim, np.linalg.inv(T2), iBgr=bgr, iInterp=1)
@@ -51,7 +51,10 @@ if __name__ == "__main__":
 
     T3 = getParameters("affine", trans=[offset2[0], offset2[1]])
     Timage3 = transformImage("affine", Timage1, pxDim, np.linalg.inv(T3), iBgr=bgr, iInterp=1)
-    displayImage(Timage3, "Premik 2")
+    displayImage(Timage3, "Translacija 2")
+
+    # NOTE: Tu se mi je najlazje zdelo resitev izvesti na tak nacin, zanima me ce je resitev prevec "nastrikana"
+
 
 # Naloga 3:
 if __name__ == "__main__":
@@ -70,24 +73,51 @@ if __name__ == "__main__":
     sobelImageX = thresholdImage(sobelImageX, 250)
     sobelImageY = thresholdImage(sobelImageY, 250)
 
-
     displayImage(sobelImageX, 'Sobel X')
     displayImage(sobelImageY, 'Sobel Y')
 
-    # Kombiniranje slik v eno
+    # Kombiniranje filtra v osi x in v osi y v isto sliko
     combinedSobelImage = np.sqrt(sobelImageX**2 + sobelImageY**2)
     combinedSobelImage = (combinedSobelImage / np.max(combinedSobelImage)) * 255  
 
     displayImage(combinedSobelImage, 'Kombiniran Sobel')
 
-    # TO DO: poslji asistentu, da preveri
-    # TO DO: pojdi cez in porihtaj OSVlib
 
+def getCenterPoint(iImage, sideLength):
+    Y, X = iImage.shape
+    oAcc = np.zeros((Y, X))
 
+    halfSide = sideLength / 2
+    rangeF = np.arange(0, 360, 1)
+    rangeFrad = np.deg2rad(rangeF)
+    idxF = np.arange(len(rangeF))
 
+    for y in range(Y):
+        for x in range(X):
+            if iImage[y, x]:
+                for f_idx in idxF:
+                    fi = rangeFrad[f_idx]
+                    x0 = int(x - halfSide * np.cos(fi))
+                    y0 = int(y - halfSide * np.sin(fi))
 
+                    if 0 <= x0 < X and 0 <= y0 < Y:
+                        oAcc[y0, x0] += 1
 
+    max_value = np.max(oAcc)
+    center_points = np.argwhere(oAcc == max_value)
+    oCenter = center_points[0] if len(center_points) > 0 else None
 
-    
+    print(f"Center point: {oCenter}")
+    return oCenter, oAcc
 
+if __name__ == "__main__":
+    center_point, oAcc = getCenterPoint(combinedSobelImage, 53)
+    print(oAcc)
+
+    plt.imshow(Timage3, cmap='gray')
+    plt.scatter(center_point[1], center_point[0], c='red', s=20) 
+    plt.title('Center')
+    plt.show()
+
+# TO DO: v OSVlib dodaj color2grayscale in kombiniranje sobelovega filtra
 
