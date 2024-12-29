@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os, sys
 parent_dir = "/home/urban/Faks/Obdelava slik in videa/Vaje"
 sys.path.append(parent_dir)
-from OSV_lib import loadImage, displayImage
+from OSV_lib import loadImage, displayImage, getParameters, transformImage
 
 # Naloga 1:
 def getBoundaryIndices(iImage , iAxis):
@@ -120,4 +120,33 @@ if __name__ == '__main__':
     expanded_image = expandImage(cropped_image)
     figure3 = displayImage(expanded_image, 'Raztegnjena slika')
     
-    
+
+def createRotatedPattern(iImage, iAngle):
+    i_height, i_width = iImage.shape
+    oImage = np.zeros_like(iImage, dtype=float)
+
+    imSize = [i_width, i_height]
+    pxDim = [1, 1]
+    bgr = 255
+
+    center = np.array([i_width - 1, i_height - 1]) / 2
+    translation = getParameters("affine", trans=-center)
+    translation_inverse = np.linalg.inv(translation)
+
+    angles = np.linspace(0, 360 - iAngle, int(360 / iAngle))
+    for angle in angles:
+        rotation = getParameters("affine", rot=angle)
+        T = translation_inverse @ rotation @ translation
+        temp = transformImage("affine", oImage, pxDim, np.linalg.inv(T), bgr, iInterp=0)
+        oImage = oImage + temp
+
+    oImage -= oImage.min()
+    oImage /= oImage.max()
+    oImage *= 255
+
+    return oImage
+
+
+if __name__ == '__main__':
+    rotated_image = createRotatedPattern(cropped_image, 10)
+    figure4 = displayImage(rotated_image, 'Rotirana slika')
