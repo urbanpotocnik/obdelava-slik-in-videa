@@ -219,7 +219,7 @@ def loadImage3D(iPath, iSize, iType):
 
 # Dodelana funkcija iz 1. vaje
 def displayImage(iImage, iTitle='', iGridX=None, iGridY=None):
-    fig = plt.figure(facecolor="white")
+    fig = plt.figure()
     plt.title(iTitle)
 
     if iGridX is not None and iGridY is not None:
@@ -233,19 +233,21 @@ def displayImage(iImage, iTitle='', iGridX=None, iGridY=None):
             iGridY[0] - 0.5 * stepY,
         }
 
+    extent = {
+        0 - 0.5,
+        iImage.shape[1] - 0.5, 
+        iImage.shape[0] - 0.5, 
+        0 - 0.5,
+    }
+    
+    # Izračunaj extent, če sta iGridX in iGridY definirana
+    if iGridX is not None and iGridY is not None:
+        extent = [iGridX[0], iGridX[-1], iGridY[-1], iGridY[0]]  # [xmin, xmax, ymin, ymax]
+        plt.imshow(iImage, cmap='gray', vmin=0, vmax=255, aspect='equal', extent=extent)
     else:
-        extent = (
-
-            0 - 0.5,
-            iImage.shape[1] - 0.5, 
-            iImage.shape[0] - 0.5, 
-            0 - 0.5,
-        )
-        
+        plt.imshow(iImage, cmap='gray', vmin=0, vmax=255, aspect='equal')
     
-    plt.imshow(iImage, cmap=plt.cm.gray, vmin=0, vmax=255, aspect="equal", extent=extent)
-
-    
+    plt.show()
     return fig
 
 def getPlanarCrossSection(iImage, iDim, iNormVec, iLoc):
