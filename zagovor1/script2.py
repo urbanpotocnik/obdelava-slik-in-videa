@@ -95,10 +95,8 @@ if __name__ == "__main__":
 def expandImage(iImage):
     Yc, Xc = iImage.shape
 
-    # Nova slika z belim ozadjem
     oImage = np.full((2 * Yc, 2 * Yc), 255, dtype=np.uint8)
     
-    # Postavimo sliko v sredino na vrh
     oImage[:Yc, Yc//2:Yc//2 + Xc] = iImage
     
     return oImage
@@ -107,3 +105,49 @@ def expandImage(iImage):
 if __name__ == "__main__":
     expanded_image = expandImage(cropped_image)
     displayImage(expanded_image, 'Povečana prostorska domena')
+
+
+# Naloga 4:
+def rotate_image(image, angle):
+    angle_rad = np.deg2rad(angle)
+    cos_angle = np.cos(angle_rad)
+    sin_angle = np.sin(angle_rad)
+    
+    h, w = image.shape
+    center_y, center_x = h // 2, w // 2
+    
+    rotated_image = np.zeros_like(image, dtype=np.float32)
+    
+    for y in range(h):
+        for x in range(w):
+            y_shifted = y - center_y
+            x_shifted = x - center_x
+            
+            new_y = int(center_y + y_shifted * cos_angle - x_shifted * sin_angle)
+            new_x = int(center_x + y_shifted * sin_angle + x_shifted * cos_angle)
+            
+            if 0 <= new_y < h and 0 <= new_x < w:
+                rotated_image[new_y, new_x] = image[y, x]
+    
+    return rotated_image
+
+def createRotatedPattern(iImage, iAngle):
+    num_repeats = int(360 / iAngle)
+    actual_angle = 360 / num_repeats
+    
+    oImage = np.zeros_like(iImage, dtype=np.float32)
+    
+    for i in range(num_repeats):
+        angle = i * actual_angle
+        rotated_image = rotate_image(iImage, angle)
+        oImage += rotated_image
+    
+    oImage = (oImage - oImage.min()) / (oImage.max() - oImage.min()) * 255
+    oImage = oImage.astype(np.uint8)
+    
+    return oImage
+
+if __name__ == "__main__":
+    expanded_image = expandImage(cropped_image)
+    pattern_image = createRotatedPattern(expanded_image, 66)
+    displayImage(pattern_image, 'Vzorec krožno razporejenih vrtnic')
